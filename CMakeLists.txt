@@ -10,26 +10,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 可选：在根目录下统一添加 include 路径、编译选项等
-# 例如，如果所有子模块都需要包含根目录下的 include/，可以：
-# include_directories(${CMAKE_SOURCE_DIR}/include)
-# add_compile_options(-Wall -Wextra -O2)
+# 可选：在根目录下统一添加 include 路径、编译选项等 例如，如果所有子模块都需要包含根目录下的 include/，可以：
+# include_directories(${CMAKE_SOURCE_DIR}/include) add_compile_options(-Wall -Wextra -O2)
 
 # ----------------------------------------------------------------
 # 自动扫描：遍历所有一级子目录，并对每个子目录调用 add_subdirectory
 # ----------------------------------------------------------------
 # file(GLOB ...) 会将当前目录下的所有文件/文件夹名列出来，存到变量 CHILDREN 中
-file(GLOB CHILDREN RELATIVE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/*)
+file(
+  GLOB CHILDREN
+  RELATIVE ${CMAKE_SOURCE_DIR}
+  ${CMAKE_SOURCE_DIR}/*)
 
 foreach(CH ${CHILDREN})
-    # 拼出绝对路径
-    set(CH_PATH "${CMAKE_SOURCE_DIR}/${CH}")
-    # 如果是一个目录，就将它当成一个子模块，调用 add_subdirectory
-    if(IS_DIRECTORY ${CH_PATH})
-        # 可以选择过滤掉某些特殊目录名，比如 .git、build、cmake 等
-        if (NOT CH MATCHES "^\\.git$" AND NOT CH MATCHES "^build$")
-            message(STATUS "  ➜ 添加子目录：${CH}")
-            add_subdirectory(${CH})
-        endif()
+  # 拼出绝对路径
+  set(CH_PATH "${CMAKE_SOURCE_DIR}/${CH}")
+  # 如果是一个目录，就将它当成一个子模块，调用 add_subdirectory
+  if(IS_DIRECTORY ${CH_PATH})
+    # 可以选择过滤掉某些特殊目录名，比如 .git、build、cmake 等
+    if(NOT CH MATCHES "^\\.git$" AND NOT CH MATCHES "^build$")
+      message(STATUS "  ➜ 添加子目录：${CH}")
+      add_subdirectory(${CH})
     endif()
+  endif()
 endforeach()

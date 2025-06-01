@@ -1,0 +1,154 @@
+# ================================ 
+#  C/C++ 通用编译产物 
+# ================================
+
+# 编译生成的目标文件
+*.o
+*.obj
+*.lo
+*.la
+*.al
+*.lai
+
+# 生成的静态库和动态库
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.sl
+
+# 生成的可执行文件（Linux/macOS/Windows 下常见后缀）
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+
+# 编译日志、依赖文件等
+*.log
+*.cmd
+*.ilk
+*.idb
+*.pdb
+
+# CMake 相关中间文件
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+install_manifest.txt
+
+# Ninja
+build.ninja
+.ninja_deps
+.ninja_log
+
+# 预编译头
+*.gch
+*.pch
+
+# ================================ 
+#  构建输出目录 
+# ================================
+
+# 如果你把所有 build 文件都放在单独的目录（如 build/、out/、bin/），可以如下忽略：
+build/
+bin/
+out/
+Debug/
+Release/
+Dist/
+*.dir/
+
+# ================================ 
+#  IDE/编辑器 相关 
+# ================================
+
+# Visual Studio 系列
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.vcxproj.*
+*.sln
+*.vcproj
+*.sdf
+*.opensdf
+*.VC.db
+
+# CLion / IntelliJ IDEA
+.idea/
+*.iml
+cmake-build-*/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Xcode
+*.xcworkspace
+*.xcuserdata
+*.xcuserstate
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj  # 保留核心工程文件
+!*.xcworkspace/contents.xcworkspacedata
+
+# Qt Creator
+*.pro.user*
+*.qmake.stash
+*.cproject
+*.project
+
+# ================================ 
+#  系统、临时文件 
+# ================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+# 例如：Vim swap 文件、编辑器备份
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ================================ 
+#  第三方或外部依赖（可选） 
+# ================================
+
+# 如果你的项目中引入了第三方库源码，但想通过 git submodule 或者包管理工具来管理，
+# 可以在此忽略预编译的第三方库产物。例如：
+third_party/*/build/
+third_party/*/bin/
+third_party/*/*.lib
+third_party/*/*.dll
+
+# ================================ 
+#  其他 
+# ================================
+
+# Python 虚拟环境（如果在项目中使用 Python 脚本构建工具、测试等）
+venv/
+__pycache__/
+*.py[cod]
+
+# Node.js 项目（如果在项目中使用前端工具链）
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+.pnp.*
+
+# Markdown 编辑器临时文件
+*.markdoc

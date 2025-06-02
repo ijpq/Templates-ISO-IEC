@@ -143,3 +143,275 @@ MethodCaller<&Greeter::greet>::call(g);
 }
 
 ```
+
+
+## 5
+
+对于非类型模板参数,顶层的cv限定符会被忽略
+```cpp
+
+namespace B {
+    // 第二个声明是对同一个模板的定义，ok
+    template<int M>
+    struct Example;
+
+    template<int N>
+    struct Example {};
+}
+
+namespace C{
+    // 由于同一命名空间中，模板名称是唯一的，因此第二个声明是重复声明，error
+    template<void(*f)()>
+    struct Example;
+    
+    template<int M>
+    struct Example;
+}
+
+namespace A{
+    template<const int N>
+    struct Example;
+    
+    // 第二次声明：定义 “template<int N>”
+    // 这行并不会被当作“新模板”，而是跟上面那条合并为“同一个模板”的声明。视为对同一个模板的定义
+    template<int N>
+    struct Example {
+        static constexpr int value = N;
+    };
+}
+
+/*
+<source>:16:23: error: template parameter 'void (* f)()'
+   16 |     template<void(*f)()>
+      |                       ^
+<source>:19:18: note: redeclared here as 'int M'
+   19 |     template<int M>
+      |                  ^
+Compiler returned: 1
+*/
+```
+
+## 6
+非类型非引用模板参数是纯右值,不能被赋值,不能修改它的值,不能取地址.
+
+## 7
+非类型参数不能使用浮点数/类型/void进行声明
+
+> 原因在于，类类型的对象通常在编译期无法彻底归一化为字面常量——它可能包含非静态数据成员、虚函数表指针、对齐规则、构造／析构逻辑等，编译器很难（或不允许）将其作为一个单一的整型／指针那样的“模板参数值”进行比较和区分。
+```cpp
+template<float  F> struct A1 {};   // ❌ 编译错误：浮点类型不能做非类型模板参数
+template<double D> struct A2 {};   // ❌ 同上
+template<long double L> struct A3 {}; // ❌ 同上
+
+struct Point {  // 普通的类类型
+    int x, y;
+};
+
+// 错误示例：以下在 C++17 里都会被拒绝
+template<Point P> struct B1 {};    // ❌ 报错：Point 不是允许的非类型模板参数类型
+template<const Point P> struct B2 {}; // ❌ 即使加 const 也不行
+
+template<void V> struct C1 {};   // ❌ 报错：void 不是允许的非类型模板参数
+template<void* Ptr> struct C2 {}; // ok
+
+/*
+void* 虽然 “指向的对象类型未知”，但它依然是“一个对象指针类型”（pointer to object），编译器在编译期可以把它当作常量（例如 nullptr 或者某个全局 void* 变量的地址）进行处理，所以也被标准允许。
+*/
+
+```
+
+
+## 8
+
+在非类型模板参数中,如果该参数的类型是array of T, 或者是函数类型,那么都会被自动转换为指向T的指针.
+
+```cpp
+namespace A {
+    template<int Func(int)>
+    struct X2;
+
+    template<int (*f)(int)> 
+    struct X2 {};
+
+    template<int* p>
+    struct X3;
+
+    template<int m[]> 
+    struct X3 {};
+}
+```
+
+在这个代码中,展示了该规则是有效的,因为只有被视为同一个模板的补充定义,才会通过编译.
+
+## 9
+
+类型/非类型/模板作为模板参数时,只有不是参数包,都可以使用参数包.
+
+默认模板参数可以在模板声明时指定.
+
+默认模板参数不能在模板类外定义成员时使用
+
+```cpp
+// 默认模板参数不能在模板类外定义成员时使用
+template<typename T=int>
+struct A{
+    void func();
+};
+
+template<typename T>
+void A<T>::func() {}
+
+template<typename T=int>
+struct B{
+    void func();
+};
+
+template<typename T=int> // 此处不能使用默认参数
+void B<T>::func() {}
+
+/*
+<source>:19:17: error: default argument for template parameter for class enclosing 'void B<T>::func()' [-Wtemplate-body]
+   19 | void B<T>::func() {}
+      |                 ^
+*/
+```
+
+## 10
+
+当同一个模板在程序中出现多次声明（前向声明或分开写的声明/定义）时，所有这些声明中为模板参数给出的默认实参会被“合并”起来，就像函数的默认参数那样。编译器会从最早的声明开始，依次收集、补全每个参数的默认值。
+
+```cpp
+// 第一次声明：为 T 提供默认参数 int，为 U 暂时不写
+template<typename T = int, typename U>
+struct X;
+// 第二次声明：补全 U 的默认参数为 double
+template<typename T, typename U = double>
+struct X {
+    // 这既是“声明”，又是“定义”
+};
+/*
+编译器首先看到第一个声明 template<typename T = int, typename U> struct X;，就记录下来：T 的默认是 int，U 还没有默认。
+
+当它再看到第二个声明 template<typename T, typename U = double> struct X 时，它会发现“T 在之前已经有默认了（int），因此不能再改；U 之前没有默认，这里给出了默认 double，就把 U 的默认设为 double”。
+*/
+
+template<typename T = int, typename U = double> struct X { … };
+```
+
+
+## 11
+
+1. 提供默认参数的模板参数之后,都需要有默认参数,或者模板参数是参数包
+```cpp
+// 对于类模板,变量模板,别名模板
+template<typename T = int , typename U>
+struct A;
+template<typename T = int , typename U = long>
+struct B;
+template<typename T = int , typename ...U>
+struct C;
+/*
+
+<source>:6:8: error: no default argument for 'U'
+    6 | struct A;
+      |        ^
+*/
+```
+
+2. 参数包必须是parameter-list中的最后一个模板参数
+```cpp
+// 对于主类模板,主变量模板,别名模板
+template<typename ...U>
+struct C;
+template<typename ...U, typename T>
+struct B;
+template<typename ...U, typename T=int>
+struct A;
+template<typename ...U, typename ...T>
+struct D {};
+/*
+<source>:8:10: error: parameter pack 'U' must be at the end of the template parameter list
+    8 | template<typename ...U, typename T>
+      |          ^~~~~~~~
+<source>:10:10: error: parameter pack 'U' must be at the end of the template parameter list
+   10 | template<typename ...U, typename T=int>
+      |          ^~~~~~~~
+<source>:24:22: error: template parameter pack must be the last template parameter
+   24 | template<typename ...U, typename ...T>
+      |                      ^
+*/
+```
+
+3. 对于函数模板,也适用规则2的要求,除非参数包后面的模板参数可以被函数的参数列表推导出来,或者具有默认值
+
+```cpp
+struct A{
+    A(int a) {}
+};
+
+template<typename ...U>
+void func1(U&&... u) {}; // 参数包是最后一个模板参数，不存在问题
+
+template<typename ...U, typename T>
+void func2() {}; // 不符合标准，因为无法从**函数的参数列表**中推导
+
+template<typename ...U, typename T>
+T func3() {return T{0};}; // 不符合标准，因为无法从**函数的参数列表**中推导
+
+template<typename ...U, typename T>
+void func4(U&&... u, T) {}; // 符合标准的做法：在参数包后面的模板参数可以从 函数的参数列表 中推导；不过这里有很大问题，参数包会吸很多参数，所以不如把参数包放在最后
+
+template<typename ...U, typename T = A>
+T func5(U&&... u) {return T{0};}; // 符合标准的做法：在参数包后面的模板参数有默认值
+
+int main () {
+
+func1(1);
+
+func2<A>();
+
+A a2 = func3<A>();
+
+A a(99);
+func4(a); 
+
+func5(1);
+}
+```
+
+### C++17引入的模板参数deduction guide
+
+见17.9
+
+## 12
+
+不能在两个不同的声明中给出模板参数的默认值
+
+## 13
+关于在parameter list中使用`>`
+当该符号不是list的结尾时，加个括号
+
+
+## 14
+在parameter-list中使用模板时，提供默认值的限制。有些复杂..
+
+## 15
+
+1. 任何在参数列表里带有 前置`...` 的模板参数都称为“参数包”。
+
+2. 如果一个模板参数包本身的 声明 使用了另一个“未展开的”参数包＋...，那么它就是一个“包扩展”形式。
+
+3. 参数包不能在同一个parameterlist中进行声明的同时，进行展开
+
+```cpp
+template <class... Types> class Tuple; // Types is a template type parameter pack
+// but not a pack expansion
+template <class T, int... Dims> struct multi_array; // Dims is a non-type template parameter pack
+// but not a pack expansion
+template<class... T> struct value_holder {
+template<T... Values> struct apply { }; // Values is a non-type template parameter pack
+// and a pack expansion
+};
+template<class... T, T... Values> struct static_array;// error: Values expands template type parameter
+// pack T within the same template parameter list
+```

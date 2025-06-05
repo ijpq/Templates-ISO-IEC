@@ -28,7 +28,7 @@ struct Example {
 
 template< template<typename C> typename T>
 struct Example2 {
-    // 类型参数仍然使用typename声明，但是当标识符是一个模板名时，再使用template声明
+    // typename C中, C一般应该省略. 因为template<typename C> typename T 表明类型T是一个模板,而不是一个具体的类型. 并且,模板类型T中的模板参数C并无法被使用. 只起到占位和匹配的意图,就是告诉编译器模板类型T是接受一个模板参数的模板类型
     T<int> a;
 };
 
@@ -359,7 +359,65 @@ template<typename ...U, typename T>
 T func3() {return T{0};}; // 不符合标准，因为无法从**函数的参数列表**中推导
 
 template<typename ...U, typename T>
-void func4(U&&... u, T) {}; // 符合标准的做法：在参数包后面的模板参数可以从 函数的参数列表 中推导；不过这里有很大问题，参数包会吸很多参数，所以不如把参数包放在最后
+void func4(U&&... u, T) {}; // 符合标准的做法：在参数包后面的模板参数可以从 函数的参数列表 中推导；但参数包会吸很多参数
+
+template<typename ...U, typename T>
+void func4(T, U&&... u) {}; // 符合标准的做法：在参数包后面的模板参数可以从 函数的参数列表 中推导；
+
+template<typename ...U, typename T = A>
+T func5(U&&... u) {return T{0};}; // 符合标准的做法：在参数包后面的模板参数有默认值
+
+int main () {
+
+func1(1);
+
+func2<A>();
+
+A a2 = func3<A>();
+
+A a(99);
+func4(a); 
+
+func5(1);
+}
+```
+
+### C++17引入的模板参数deduction guide
+
+见17.9
+
+## 12
+
+不能在两个不同的声明中给出模板参数的默认值
+
+## 13
+关于在parameter list中使用`>`
+当该符号不是list的结尾时，加个括号
+
+
+## 14
+在parameter-list中使用模板时，提供默认值的限制。有些复杂..
+
+## 15
+
+1. 任何在参数列表里带有 前置`...` 的模板参数都称为“参数包”。
+
+2. 如果一个模板参数包本身的 声明 使用了另一个“未展开的”参数包＋...，那么它就是一个“包扩展”形式。
+
+3. 参数包不能在同一个parameterlist中进行声明的同时，进行展开
+
+```cpp
+template <class... Types> class Tuple; // Types is a template type parameter pack
+// but not a pack expansion
+template <class T, int... Dims> struct multi_array; // Dims is a non-type template parameter pack
+// but not a pack expansion
+template<class... T> struct value_holder {
+template<T... Values> struct apply { }; // Values is a non-type template parameter pack
+// and a pack expansion
+};
+template<class... T, T... Values> struct static_array;// error: Values expands template type parameter
+// pack T within the same template parameter list
+```
 
 template<typename ...U, typename T = A>
 T func5(U&&... u) {return T{0};}; // 符合标准的做法：在参数包后面的模板参数有默认值

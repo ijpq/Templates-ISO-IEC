@@ -25,12 +25,17 @@ file(
 foreach(CH ${CHILDREN})
   # 拼出绝对路径
   set(CH_PATH "${CMAKE_SOURCE_DIR}/${CH}")
-  # 如果是一个目录，就将它当成一个子模块，调用 add_subdirectory
+  # 如果是一个目录
   if(IS_DIRECTORY ${CH_PATH})
-    # 可以选择过滤掉某些特殊目录名，比如 .git、build、cmake 等
+    # 过滤掉某些特殊目录
     if(NOT CH MATCHES "^\\.git$" AND NOT CH MATCHES "^build$")
-      message(STATUS "  ➜ 添加子目录：${CH}")
-      add_subdirectory(${CH})
+      # 检查是否存在 CMakeLists.txt
+      if(EXISTS "${CH_PATH}/CMakeLists.txt")
+        message(STATUS "  ➜ 添加子目录：${CH}")
+        add_subdirectory(${CH})
+      else()
+        message(STATUS "  ⚠️ 跳过子目录（缺少 CMakeLists.txt）：${CH}")
+      endif()
     endif()
   endif()
 endforeach()

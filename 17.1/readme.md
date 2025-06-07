@@ -32,6 +32,12 @@ struct Example2 {
     T<int> a;
 };
 
+// 如果想定义模板类型T的模板参数，需要额外声明模板参数
+template< template<typename> typename T, typename C>
+struct Example3 {
+    T<C> a;
+};
+
 ```
 
 ## 4
@@ -298,6 +304,33 @@ struct X {
 template<typename T = int, typename U = double> struct X { … };
 ```
 
+再看一个libcxx中的使用方式
+```cpp
+/*
+<source>: In instantiation of 'struct Class<long int, std::pair<long int, long int> >':
+<source>:18:34:   required from here
+<source>:13:24: error: static assertion failed
+   13 |     static_assert(std::is_same_v<D,int> && std::is_same_v<E,int>);
+      |                   ~~~~~^~~~~~~~~~~~~~~~
+<source>:13:24: note: 'std::is_same_v<long int, int>' evaluates to false
+Compiler returned: 1
+*/
+template<typename A, typename B = pair<int,int>>
+struct Class;
+
+
+template<typename C, typename D, typename E>
+struct Class<C, pair<D,E>> {
+    Class() {cout << "partial" << endl;}    
+    static_assert(std::is_same_v<D,int> && std::is_same_v<E,int>);
+};
+
+int main() {
+    Class<long> c;// 因为第二个模板参数的默认值已经被“收集”，因此可以省略第二个模板参数，匹配partial spec的模板
+    Class<long, pair<long,long>> d;
+
+}
+```
 
 ## 11
 
@@ -396,7 +429,67 @@ func5(1);
 
 
 ## 14
-在parameter-list中使用模板时，提供默认值的限制。有些复杂..
+在parameter-list中使用模板作为模板参数时，可以给作为模板参数的模板指定它自己的模板参数的默认值。但该默认值并不属于类型的一部分，只属于作为模板参数的模板的一部分。因此，不应该指望编译器这里能将这种默认值进行整合
+
+例如下面这段代码
+
+```cpp
+// gcc-13.1 --std=c++17
+/*
+<source>: In member function 'void A<T>::f()':
+<source>:25:7: error: wrong number of template arguments (0, should be 1)
+   25 |     T<> t;
+      |       ^
+<source>:23:41: note: provided for 'template<class TT> class T'
+   23 | template<template<typename TT> typename T>
+      |                                         ^
+Compiler returned: 1
+*/
+
+// clang-15.0 --std=c++17
+/*
+<source>:25:5: error: too few template arguments for template template parameter 'T'
+    T<> t;
+    ^
+<source>:23:41: note: template is declared here
+template<template<typename TT> typename T> 
+         ~~~~~~~~~~~~~~~~~~~~~          ^
+1 error generated.
+Compiler returned: 1
+*/
+template<typename T>
+struct dummy {
+    dummy() {cout << "dummy, " << typeid(T).name() << endl; ;}
+};
+
+template<template<typename T = float> typename U>
+struct Class {
+    U<> u;
+};
+
+template<template<typename TT = float> typename T> // 这里作为模板参数的模板类型参数T的模板参数TT的默认值并不会在编译器看到类型A的定义时进行收集。这就是为什么函数f的声明会报错
+struct A {
+    inline void f();
+    inline void g();
+};
+
+
+template<template<typename TT> typename T> 
+void A<T>::f() {
+    T<> t;
+}
+
+template<template<typename TT = char> typename T>
+void A<T>::g() {
+    T<> t;
+}
+int main() {
+    Class<dummy> c;
+    A<dummy> a1;
+    a1.f();
+    a1.g();
+}
+```
 
 ## 15
 
@@ -417,7 +510,7 @@ template<T... Values> struct apply { }; // Values is a non-type template paramet
 };
 template<class... T, T... Values> struct static_array;// error: Values expands template type parameter
 // pack T within the same template parameter list
-```
+
 
 template<typename ...U, typename T = A>
 T func5(U&&... u) {return T{0};}; // 符合标准的做法：在参数包后面的模板参数有默认值
